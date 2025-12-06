@@ -1,21 +1,22 @@
-# La Meuh – Mises à jour Windows en un clic !
+<div align="center">
 
+# 🐄 La Meuh – Mises à jour Windows en un clic ! 🐄
 **Un outil simple et efficace pour mettre à jour tous vos programmes Windows en un seul clic !**
 
 ---
 
-## 📌 Prérequis
+## 🐄 Prérequis
 - **Windows 11** (avec `winget` installé par défaut).
 - Aucun autre logiciel requis.
 
 ---
 
-## 🚀 Installation & Utilisation
+## 🐄 Installation & Utilisation
 
 ### 1. Téléchargement
-- [Clone ce dépôt](https://github.com/Spellskite-coding/La-meuh-) ou télécharge le `.zip` en cliquant sur le bouton **"Code"**, puis **"Download ZIP"**.
+- [Clone ce dépôt](https://github.com/Spellskite-coding/La-meuh-) ou télécharge le `.zip` en cliquant sur **"Code" → "Download ZIP"**.
 
-### 2. Compilation du programme
+### 2. Compilation
 1. Place tous les fichiers dans un même dossier :
    - `main.c`, `resource.h`, `resource.rc`, `compile.bat`
    - `la_meuh.ico`, `marguerite.bmp`
@@ -40,3 +41,5 @@
 
 ---
 © 2025 [Spellskite](https://github.com/Spellskite-coding)
+
+</div>
