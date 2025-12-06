@@ -42,7 +42,7 @@ Clone ce dépôt ou télécharge le `.zip` en cliquant sur **"Code" → "Downloa
 ---
 
 ### 🐄 Licence :
-[MIT](LICENSE) – Libre d'utiliser, modifier et distribuer.
+[MIT](LICENCE) – Libre d'utiliser, modifier et distribuer.
 
 ---
 © 2025 [Spellskite-coding](https://github.com/Spellskite-coding)
