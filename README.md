@@ -1,5 +1,3 @@
-<div align="center">
-
 # 🐄 La Meuh – Mises à jour Windows en un clic ! 🐄
 
 *Un outil simple et efficace pour mettre à jour tous vos programmes Windows en un seul clic !*
@@ -48,5 +46,3 @@ Clone ce dépôt ou télécharge le `.zip` en cliquant sur **"Code" → "Downloa
 
 ---
 © 2025 [Spellskite](https://github.com/Spellskite-coding)
-
-</div>
