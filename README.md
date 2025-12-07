@@ -28,9 +28,9 @@ Clone ce dépôt ou télécharge le `.zip` en cliquant sur **"Code" → "Downloa
 ---
 
 ### 🐄 Utilisation :
-- Lance `la_meuh.exe`.
+- Lance `la_meuh.exe !
 - Clique sur **"Mettre à jour"**.
-- Attends la fin de la progression.
+- Attends la fin de la progression de toutes les mises à jour !
 
 ---
 
@@ -38,6 +38,7 @@ Clone ce dépôt ou télécharge le `.zip` en cliquant sur **"Code" → "Downloa
 
 - Si `winget` est absent, un message d'erreur s'affichera.
 - **Aucune dépendance externe** : un seul fichier `.exe` à distribuer !
+- Si vous ne voulez pas vous amuser à compiler le code vous même, ce qui est compréhensible, vous pouvez simplement télécharger le programme la_meuh.exe ! Le reste est à votre disposition pour vos propres modifications !
 
 ---
 
