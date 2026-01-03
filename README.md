@@ -14,7 +14,7 @@
 ## 🐄 Installation & Utilisation :
 
 ### Téléchargement
-Clone ce dépôt ou télécharge le `.zip` en cliquant sur **"Code" → "Download ZIP"**.
+Clone ce dépôt ou télécharge le .zip en cliquant sur "Code" → "Download ZIP" ou télécharge la dernière version depuis les [releases GitHub](https://github.com/Spellskite-coding/La_meuh/releases/).
 
 ---
 
