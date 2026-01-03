@@ -47,4 +47,4 @@ Clone ce dépôt ou télécharge le `.zip` en cliquant sur **"Code" → "Downloa
 [MIT](LICENCE) – Libre d'utiliser, modifier et distribuer.
 
 ---
-© 2026 Spellskite-coding (https://github.com/Spellskite-coding) et Marwane Toury (https://github.com/MarwaneToury).
+© 2026 Spellskite-coding et Marwane Toury (https://github.com/MarwaneToury).
