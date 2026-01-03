@@ -21,8 +21,7 @@ Clone ce dépôt ou télécharge le `.zip` en cliquant sur **"Code" → "Downloa
 ### 🐄 Compilation :
 1. Place tous les fichiers dans un même dossier :
    - `main.c`, `resource.h`, `resource.rc`, `compile.bat`
-   - `la_meuh.ico`, `marguerite.bmp`
-   - 'la_meuh.manifest'
+   - `la_meuh.ico`, `marguerite.bmp`, `la_meuh.manifest`
 2. Double-clique sur `compile.bat`.
 3. Le programme `la_meuh.exe` sera généré.
 
