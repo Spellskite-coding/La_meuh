@@ -16,6 +16,7 @@ HWND hUpdateButton;
 HWND hQuitButton;
 HBITMAP hMargueriteBitmap;
 BOOL bUpdateInProgress = FALSE;
+HANDLE hWingetProcess = NULL;  // Handle du processus winget pour fermeture propre
 
 // Prototypes
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -64,19 +65,22 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
         case WM_CREATE:
         {
-            // Charge l'image depuis les ressources (taille reduite 80x80)
+            // Charge l'image depuis les ressources
             hMargueriteBitmap = (HBITMAP)LoadImage(
                 GetModuleHandle(NULL),
                 MAKEINTRESOURCE(IDB_MARGUERITE),
-                IMAGE_BITMAP, 80, 80, LR_CREATEDIBSECTION
+                IMAGE_BITMAP, 80, 80, LR_DEFAULTSIZE
             );
 
             // Image a gauche
             HWND hImage = CreateWindow(
-                "STATIC", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_CENTERIMAGE,
+                "STATIC", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP,
                 15, 15, 80, 80, hwnd, (HMENU)100, NULL, NULL
             );
-            SendMessage(hImage, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hMargueriteBitmap);
+            if (hImage && hMargueriteBitmap)
+            {
+                SendMessage(hImage, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hMargueriteBitmap);
+            }
 
             // Status label a droite de l'image
             hStatusLabel = CreateWindow(
@@ -138,6 +142,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     if (MessageBox(hwnd, "Une mise a jour est en cours.\nVoulez-vous vraiment quitter ?",
                                    "Confirmation", MB_YESNO | MB_ICONQUESTION) == IDYES)
                     {
+                        // Terminer winget avant de fermer
+                        if (hWingetProcess != NULL)
+                        {
+                            TerminateProcess(hWingetProcess, 0);
+                            CloseHandle(hWingetProcess);
+                            hWingetProcess = NULL;
+                        }
                         DestroyWindow(hwnd);
                     }
                 }
@@ -150,6 +161,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         }
         case WM_DESTROY:
         {
+            // Terminer winget proprement si en cours
+            if (hWingetProcess != NULL)
+            {
+                TerminateProcess(hWingetProcess, 0);
+                CloseHandle(hWingetProcess);
+                hWingetProcess = NULL;
+            }
             if (hMargueriteBitmap) DeleteObject(hMargueriteBitmap);
             PostQuitMessage(0);
             break;
@@ -235,6 +253,8 @@ DWORD WINAPI UpdateThread(LPVOID lpParam)
         return 1;
     }
 
+    // Stocker le handle pour fermeture propre
+    hWingetProcess = pi.hProcess;
     CloseHandle(hWrite);
 
     SetWindowText(hStatusLabel, "Mise a jour en cours...");
@@ -260,8 +280,9 @@ DWORD WINAPI UpdateThread(LPVOID lpParam)
 
     DWORD exitCode;
     GetExitCodeProcess(pi.hProcess, &exitCode);
-    CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    hWingetProcess = NULL;
 
     SendMessage(hProgressBar, PBM_SETPOS, 100, 0);
 
