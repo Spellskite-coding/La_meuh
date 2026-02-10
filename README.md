@@ -19,10 +19,8 @@ Clone ce dépôt ou télécharge le .zip en cliquant sur "Code" → "Download ZI
 ---
 
 ### 🐄 Compilation :
-1. Place tous les fichiers dans un même dossier :
-   - `main.c`, `resource.h`, `resource.rc`, `compile.bat`
-   - `la_meuh.ico`, `marguerite.bmp`, `la_meuh.manifest`
-2. Double-clique sur `compile.bat`.
+1. Place tous les fichiers du dossier "src" ensemble.
+2. Utilise le fichier `compile.bat` dans un environnement MINGW64.
 3. Le programme `la_meuh.exe` sera généré.
 
 ---
