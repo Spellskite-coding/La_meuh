@@ -2,8 +2,8 @@
 #include "resource.h"
 
 // Chemins relatifs aux fichiers de ressources
-IDI_ICON1 ICON "C:\\Users\\Windows\\Desktop\\developpement\\La_meuh-main\\La_meuh-main\\src\\la_meuh.ico"
-IDB_MARGUERITE BITMAP "C:\\Users\\Windows\\Desktop\\developpement\\La_meuh-main\\La_meuh-main\\src\\marguerite.bmp"
+IDI_ICON1 ICON "C:\\Users\\Windows\\Downloads\\La_meuh-main\\La_meuh-main\\src\\la_meuh.ico"
+IDB_MARGUERITE BITMAP "C:\\Users\\Windows\\Downloads\\La_meuh-main\\La_meuh-main\\src\\marguerite.bmp"
 
 // Informations de version
 VS_VERSION_INFO VERSIONINFO
