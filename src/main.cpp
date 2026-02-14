@@ -5,7 +5,7 @@
 
 #include <windows.h>
 #include <commctrl.h>
-#include <cwchar>  // Pour swprintf
+#include <cwchar>
 #include "resource.h"
 
 #pragma execution_character_set("utf-8")
@@ -27,25 +27,42 @@ HANDLE hWingetProcess = NULL;
 // Prototypes
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 DWORD WINAPI UpdateThread(LPVOID lpParam);
-BOOL ExecuteWingetUpgrade();
+BOOL ExecuteWingetUpgrade(HANDLE* hReadPipe);
 
-BOOL ExecuteWingetUpgrade()
+BOOL ExecuteWingetUpgrade(HANDLE* hReadPipe)
 {
+    SECURITY_ATTRIBUTES saAttr = { sizeof(SECURITY_ATTRIBUTES) };
+    saAttr.bInheritHandle = TRUE;
+    saAttr.lpSecurityDescriptor = NULL;
+
+    HANDLE hChildStdoutRd, hChildStdoutWr;
+    if (!CreatePipe(&hChildStdoutRd, &hChildStdoutWr, &saAttr, 0))
+        return FALSE;
+
+    if (!SetHandleInformation(hChildStdoutRd, HANDLE_FLAG_INHERIT, 0))
+        return FALSE;
+
     STARTUPINFOW si = { sizeof(si) };
-    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
     si.wShowWindow = SW_HIDE;
+    si.hStdOutput = hChildStdoutWr;
+    si.hStdError = hChildStdoutWr;
 
     wchar_t cmdLine[MAX_PATH + 200];
-    swprintf(cmdLine, MAX_PATH + 200, L"winget upgrade --all --silent --accept-source-agreements --accept-package-agreements");
+    swprintf(cmdLine, MAX_PATH + 200, L"winget upgrade --all --accept-source-agreements --accept-package-agreements");
 
     PROCESS_INFORMATION pi = {0};
-    BOOL result = CreateProcessW(NULL, cmdLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+    BOOL result = CreateProcessW(NULL, cmdLine, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
 
     if (!result)
     {
+        CloseHandle(hChildStdoutRd);
+        CloseHandle(hChildStdoutWr);
         return FALSE;
     }
 
+    CloseHandle(hChildStdoutWr);
+    *hReadPipe = hChildStdoutRd;
     hWingetProcess = pi.hProcess;
     CloseHandle(pi.hThread);
     return TRUE;
@@ -188,7 +205,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 int length = GetWindowTextLengthW(hLogEdit);
                 SendMessageW(hLogEdit, EM_SETSEL, length, length);
                 SendMessageW(hLogEdit, EM_REPLACESEL, 0, (LPARAM)wbuffer);
-                SendMessageW(hLogEdit, EM_REPLACESEL, 0, (LPARAM)L"\r\n");
                 delete[] wbuffer;
             }
             break;
@@ -223,11 +239,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 DWORD WINAPI UpdateThread(LPVOID lpParam)
 {
     HWND hwnd = (HWND)lpParam;
-    PostMessageW(hwnd, WM_UPDATE_LOG, 0, (LPARAM)"Recherche de mises à jour en cours...");
+    HANDLE hReadPipe = NULL;
+    PostMessageW(hwnd, WM_UPDATE_LOG, 0, (LPARAM)"Lancement de winget...\n");
 
-    if (!ExecuteWingetUpgrade())
+    if (!ExecuteWingetUpgrade(&hReadPipe))
     {
-        PostMessageW(hwnd, WM_UPDATE_LOG, 0, (LPARAM)"Erreur: Impossible de lancer winget.");
+        PostMessageW(hwnd, WM_UPDATE_LOG, 0, (LPARAM)"Erreur: Impossible de lancer winget.\n");
         PostMessageW(hwnd, WM_UPDATE_STATUS, 0, (LPARAM)L"Erreur lors du lancement de winget.");
         PostMessageW(hwnd, WM_UPDATE_BUTTON, 0, (LPARAM)L"Mettre à jour");
         bUpdateInProgress = FALSE;
@@ -236,16 +253,31 @@ DWORD WINAPI UpdateThread(LPVOID lpParam)
 
     PostMessageW(hwnd, WM_UPDATE_STATUS, 0, (LPARAM)L"Mise à jour en cours...");
 
+    // Lire la sortie de winget
+    DWORD dwRead;
+    CHAR chBuf[4096];
+    BOOL bSuccess = FALSE;
+
+    for (;;)
+    {
+        bSuccess = ReadFile(hReadPipe, chBuf, sizeof(chBuf) - 1, &dwRead, NULL);
+        if (!bSuccess || dwRead == 0) break;
+
+        chBuf[dwRead] = '\0';
+        PostMessageW(hwnd, WM_UPDATE_LOG, 0, (LPARAM)chBuf);
+    }
+
     // Attendre la fin du processus winget
     WaitForSingleObject(hWingetProcess, INFINITE);
     DWORD exitCode;
     GetExitCodeProcess(hWingetProcess, &exitCode);
     CloseHandle(hWingetProcess);
     hWingetProcess = NULL;
+    CloseHandle(hReadPipe);
 
     // Afficher le résultat
-    PostMessageW(hwnd, WM_UPDATE_LOG, 0, (LPARAM)"Vérification des mises à jour terminée.");
-    PostMessageW(hwnd, WM_UPDATE_STATUS, 0, (LPARAM)L"Aucune mise à jour nécessaire.");
+    PostMessageW(hwnd, WM_UPDATE_LOG, 0, (LPARAM)"Vérification des mises à jour terminée.\n");
+    PostMessageW(hwnd, WM_UPDATE_STATUS, 0, (LPARAM)L"Mise à jour terminée.");
     PostMessageW(hwnd, WM_UPDATE_BUTTON, 0, (LPARAM)L"Mettre à jour");
     bUpdateInProgress = FALSE;
 
