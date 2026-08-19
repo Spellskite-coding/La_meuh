@@ -157,4 +157,4 @@ Wine + Xvfb pour vérifier qu'il démarre sans planter).
 
 ## Licence
 
-MIT — © 2026 Spellskite-coding et Marwane Toury, comme l'original.
+MIT — © 2026 Spellskite-coding et Marwane Toury.
