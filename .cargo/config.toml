@@ -1,0 +1,11 @@
+[build]
+target = "x86_64-pc-windows-msvc"
+
+[target.x86_64-pc-windows-msvc]
+runner = "wine64"
+# Lie le runtime MSVC (VCRUNTIME140.dll, msvcp140.dll, ucrtbase.dll...)
+# statiquement dans l'exe, au lieu d'en dépendre dynamiquement. Sans ça,
+# l'exe échoue au lancement sur toute machine Windows qui n'a pas le
+# "Visual C++ Redistributable" déjà installé (VCRUNTIME140.dll introuvable),
+# ce qui casse la promesse "un seul .exe, aucune dépendance externe".
+rustflags = ["-C", "target-feature=+crt-static"]
