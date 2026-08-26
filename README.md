@@ -1,160 +1,162 @@
-# 🐄 La Meuh (Rust) — refonte sécurisée
+# 🐄 La Meuh (Rust) — secure rewrite
 
-Réécriture en Rust de [La Meuh](../La_meuh/) (originellement en C++/Win32),
-un utilitaire pour lancer `winget upgrade --all` en un clic, avec la même
-interface graphique et la même vache qu'avant.
+Rust rewrite of [La Meuh](../La_meuh/) (originally in C++/Win32), a utility
+for launching `winget upgrade --all` with a single click, with the same
+graphical interface and the same cow as before.
 
-Le C++ original reste dans `/home/user/La_meuh/` à titre de référence; ce
-dossier ne le modifie jamais.
+The original C++ code stays in `/home/user/La_meuh/` for reference; this
+folder never modifies it.
 
-## Ce qui a changé, et pourquoi
+## What changed, and why
 
-### 1. Plus de demande d'élévation UAC (`requireAdministrator` → `asInvoker`)
+### 1. No more UAC elevation prompt (`requireAdministrator` → `asInvoker`)
 
-`winget` est distribué par le paquet "App Installer". Son binaire réel vit
-sous un dossier versionné et protégé par ACL
+`winget` is shipped as part of the "App Installer" package. Its actual
+binary lives under a versioned, ACL-protected folder
 (`C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_<version>...\`),
-mais Windows expose un **alias d'exécution stable et non privilégié**:
+but Windows exposes a **stable, non-privileged execution alias**:
 
 ```
 %LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe
 ```
 
-Ce dossier est ajouté automatiquement au PATH *utilisateur* (pas
-administrateur). L'ancien code C++ s'appuyait déjà implicitement dessus (il
-laissait `CreateProcessW` chercher "winget" sur le PATH) — mais son
-manifeste demandait quand même `requireAdministrator`, ce qui forçait UAC
-pour lancer *tout le programme*, sans raison technique. La version Rust
-résout ce chemin explicitement (voir [`src/winget.rs`](src/winget.rs)) et le
-manifeste demande désormais `asInvoker`: aucune élévation n'est jamais
-demandée par La Meuh elle-même. Si une mise à jour précise nécessite des
-droits admin, c'est `winget`/le paquet concerné qui gère sa propre
-élévation, paquet par paquet — principe du moindre privilège.
+This folder is automatically added to the *user* PATH (not the
+administrator one). The original C++ code already relied on it implicitly
+(it let `CreateProcessW` search for "winget" on the PATH) — but its
+manifest still requested `requireAdministrator`, which forced UAC to launch
+*the entire program*, for no technical reason. The Rust version resolves
+this path explicitly (see [`src/winget.rs`](src/winget.rs)) and the
+manifest now requests `asInvoker`: La Meuh itself never requests elevation.
+If a specific update requires admin rights, it's `winget`/the package in
+question that handles its own elevation, package by package — principle of
+least privilege.
 
-Autre différence volontaire: on ne réutilise jamais la recherche de PATH
-*implicite* de `CreateProcessW` (celle qui s'active quand `lpApplicationName`
-est NULL), car elle inclut le répertoire courant du processus dans son ordre
-de recherche — un utilisateur qui double-clique `la_meuh.exe` depuis un
-dossier Téléchargements contenant un faux `winget.exe` pourrait exécuter du
-code arbitraire (CWE-427, "uncontrolled search path element"). La résolution
-Rust ne regarde jamais le répertoire courant, et `CreateProcessW` est appelé
-avec un `lpApplicationName` absolu (donc sans recherche du tout).
+Another deliberate difference: the *implicit* PATH search of
+`CreateProcessW` (the one that kicks in when `lpApplicationName` is NULL)
+is never reused, because it includes the process's current directory in its
+search order — a user double-clicking `la_meuh.exe` from a Downloads folder
+containing a fake `winget.exe` could end up executing arbitrary code
+(CWE-427, "uncontrolled search path element"). The Rust resolution never
+looks at the current directory, and `CreateProcessW` is called with an
+absolute `lpApplicationName` (so no search happens at all).
 
-### 2. Cible de compilation `x86_64-pc-windows-msvc` via `cargo-xwin`
+### 2. `x86_64-pc-windows-msvc` compilation target via `cargo-xwin`
 
-Cross-compilé depuis Linux avec [`cargo-xwin`](https://github.com/rust-cross/cargo-xwin),
-qui télécharge le CRT/Windows SDK nécessaires et pilote `clang`/`lld-link`
-pour produire un binaire **ABI MSVC**, plutôt que la cible `-gnu` (mingw)
-qu'utilisait le `compile.bat` d'origine. Les binaires mingw-w64
-statiquement liés sont historiquement plus souvent associés à des faux
-positifs antivirus que les binaires MSVC — c'est le levier le plus direct
-pour réduire les alertes AV sans recourir à la signature de code (que ce
-projet n'utilise pas, par choix).
+Cross-compiled from Linux with [`cargo-xwin`](https://github.com/rust-cross/cargo-xwin),
+which downloads the required CRT/Windows SDK and drives `clang`/`lld-link`
+to produce an **MSVC ABI** binary, rather than the `-gnu` (mingw) target
+that the original `compile.bat` used. Statically linked mingw-w64 binaries
+have historically been flagged as antivirus false positives more often
+than MSVC binaries — this is the most direct lever for reducing AV alerts
+without resorting to code signing (which this project doesn't use, by
+choice).
 
-Pas de packer (UPX ou autre): un exécutable "compressé/empaqueté" est lui
-aussi un signal fort pour les heuristiques antivirus. Le binaire release est
-juste strippé (symboles retirés) via le profil Cargo standard, ce qui n'a
-rien à voir avec du packing.
+No packer (UPX or otherwise): a "compressed/packed" executable is also a
+strong signal for antivirus heuristics. The release binary is simply
+stripped (symbols removed) via the standard Cargo profile, which has
+nothing to do with packing.
 
-### 3. Icône et logo de la vache: identiques
+### 3. Cow icon and logo: identical
 
-`resources/la_meuh.ico` et `resources/marguerite.bmp` sont des copies
-directes des fichiers d'origine, embarqués via `build.rs` +
-[`embed-resource`](https://crates.io/crates/embed-resource) et
-`resources/la_meuh.rc`, exactement comme le faisait `windres` côté C++.
+`resources/la_meuh.ico` and `resources/marguerite.bmp` are direct copies of
+the original files, embedded via `build.rs` +
+[`embed-resource`](https://crates.io/crates/embed-resource) and
+`resources/la_meuh.rc`, exactly as `windres` did on the C++ side.
 
-### 4. Bugs corrigés par rapport au C++ d'origine
+### 4. Bugs fixed compared to the original C++
 
-- **Pointeur vers pile passé entre threads** (`PostMessageW(..., WM_UPDATE_LOG, ..., (LPARAM)chBuf)`
-  où `chBuf` était un tableau local du thread de fond): `PostMessage` est
-  asynchrone, donc la fenêtre pouvait lire ce pointeur bien après que le
-  thread de fond ait réutilisé/quitté ce buffer — use-after-scope. Remplacé
-  par un canal (`mpsc::channel`) qui transporte des `String` possédées; le
-  message Windows ne sert plus qu'à réveiller le thread UI.
-- **État global partagé sans synchronisation** (`bUpdateInProgress`,
-  `hWingetProcess` lus/écrits depuis le thread UI et le thread de mise à
-  jour sans verrou): remplacé par un `AtomicBool` et un `Mutex`.
-- **Fuite de handles** dans `ExecuteWingetUpgrade`: si `SetHandleInformation`
-  échouait, la fonction retournait sans fermer les deux bouts du pipe déjà
-  créés. Remplacé par une enveloppe RAII (`HandleGuard`) qui ferme toujours
-  le handle, y compris sur les chemins d'erreur anticipés.
-- **Coupure UTF-8 à la frontière de lecture**: `ReadFile` peut couper une
-  séquence UTF-8 multi-octets pile entre deux appels; l'original décodait
-  chaque bloc de 4096 octets indépendamment, ce qui pouvait corrompre le
-  dernier caractère d'un bloc. La version Rust recolle les octets
-  incomplets avant de les redécoder au tour suivant.
-- **Arrêt brutal de winget** (`TerminateProcess` immédiat au clic sur
-  Quitter): peut interrompre une installation/désinstallation en plein vol
-  et laisser un paquet dans un état incohérent. La version Rust envoie
-  d'abord un `CTRL_BREAK_EVENT` au groupe de processus de winget (démarré
-  avec `CREATE_NEW_PROCESS_GROUP`) et attend 5 secondes avant de recourir à
-  `TerminateProcess` en dernier ressort.
-- **Partage non sûr du HANDLE de processus** entre le thread de lecture de
-  sortie et le mécanisme d'annulation: les deux auraient pu fermer "le
-  même" HANDLE pendant que l'autre l'utilisait encore. Chacun reçoit
-  maintenant sa propre copie via `DuplicateHandle`.
+- **Stack pointer passed between threads** (`PostMessageW(..., WM_UPDATE_LOG, ..., (LPARAM)chBuf)`
+  where `chBuf` was a local array of the background thread): `PostMessage`
+  is asynchronous, so the window could read this pointer well after the
+  background thread had reused/exited that buffer — use-after-scope.
+  Replaced with a channel (`mpsc::channel`) that carries owned `String`
+  values; the Windows message now only serves to wake up the UI thread.
+- **Shared global state without synchronization** (`bUpdateInProgress`,
+  `hWingetProcess` read/written from both the UI thread and the update
+  thread without a lock): replaced with an `AtomicBool` and a `Mutex`.
+- **Handle leak** in `ExecuteWingetUpgrade`: if `SetHandleInformation`
+  failed, the function returned without closing the two already-created
+  pipe ends. Replaced with an RAII wrapper (`HandleGuard`) that always
+  closes the handle, including on early error paths.
+- **UTF-8 cut at the read boundary**: `ReadFile` can split a multi-byte
+  UTF-8 sequence right between two calls; the original decoded each 4096-byte
+  chunk independently, which could corrupt the last character of a chunk.
+  The Rust version stitches incomplete bytes back together before
+  redecoding them on the next pass.
+- **Abrupt winget termination** (immediate `TerminateProcess` on clicking
+  Quit): could interrupt an install/uninstall mid-flight and leave a
+  package in an inconsistent state. The Rust version first sends a
+  `CTRL_BREAK_EVENT` to winget's process group (started with
+  `CREATE_NEW_PROCESS_GROUP`) and waits 5 seconds before falling back to
+  `TerminateProcess` as a last resort.
+- **Unsafe sharing of the process HANDLE** between the output-reading
+  thread and the cancellation mechanism: both could have closed "the same"
+  HANDLE while the other was still using it. Each now receives its own
+  copy via `DuplicateHandle`.
 
 ## Structure
 
 ```
 la_meuh_rust/
 ├── Cargo.toml
-├── build.rs                 # embarque icône/bitmap/manifest/version-info
-├── .cargo/config.toml       # cible msvc + runner Wine pour `cargo test`
+├── build.rs                 # embeds icon/bitmap/manifest/version-info
+├── .cargo/config.toml       # msvc target + Wine runner for `cargo test`
 ├── resources/
-│   ├── la_meuh.ico          # copie de l'original
-│   ├── marguerite.bmp       # copie de l'original
-│   ├── la_meuh.manifest     # asInvoker (plus de requireAdministrator)
+│   ├── la_meuh.ico          # copy of the original
+│   ├── marguerite.bmp       # copy of the original
+│   ├── la_meuh.manifest     # asInvoker (no more requireAdministrator)
 │   └── la_meuh.rc
 ├── src/
-│   ├── main.rs               # point d'entrée, classe de fenêtre, boucle de messages
-│   ├── app.rs                 # état de la fenêtre + WndProc
-│   ├── process.rs            # lancement winget, lecture de sortie, annulation propre
-│   ├── winget.rs              # résolution sécurisée du chemin de winget
+│   ├── main.rs               # entry point, window class, message loop
+│   ├── app.rs                 # window state + WndProc
+│   ├── process.rs            # winget launch, output reading, clean cancellation
+│   ├── winget.rs              # secure resolution of winget's path
 │   └── resources.rs
 ├── docker/
-│   ├── Dockerfile            # image Debian: rustup, cargo-xwin, wine, clippy, audit, geiger
-│   └── run_pipeline.sh       # fmt + clippy + audit + geiger + tests (Wine) + build + fumée
-└── target/x86_64-pc-windows-msvc/release/la_meuh.exe   # binaire final
+│   ├── Dockerfile            # Debian image: rustup, cargo-xwin, wine, clippy, audit, geiger
+│   └── run_pipeline.sh       # fmt + clippy + audit + geiger + tests (Wine) + build + smoke test
+└── target/x86_64-pc-windows-msvc/release/la_meuh.exe   # final binary
 ```
 
-## Build & tests (toujours en Docker, jamais sur l'hôte)
+## Build & tests (always in Docker, never on the host)
 
 ```bash
 docker build -f docker/Dockerfile -t la-meuh-rust-builder:debian .
 docker run --rm --user "$(id -u):$(id -g)" -v "$(pwd)":/build la-meuh-rust-builder:debian ./docker/run_pipeline.sh
 ```
 
-`--user "$(id -u):$(id -g)"` est important: sans ça, le conteneur tourne en
-root et tous les fichiers qu'il écrit dans ce dossier (`target/`,
-`Cargo.lock`...) appartiennent à root sur la machine hôte, ce qui bloque
-ensuite leur suppression/copie/déplacement par un gestionnaire de fichiers
-normal (Nautilus, Thunar, `rm` sans sudo...).
+`--user "$(id -u):$(id -g)"` matters: without it, the container runs as
+root and every file it writes into this folder (`target/`, `Cargo.lock`...)
+ends up owned by root on the host machine, which then blocks their
+deletion/copy/move by a regular file manager (Nautilus, Thunar, `rm`
+without sudo...).
 
-Le pipeline lance `cargo fmt --check`, `cargo clippy -D warnings`,
-`cargo audit`, `cargo geiger`, la suite de tests sous Wine, puis la
-cross-compilation release et un test de fumée (lancement du binaire sous
-Wine + Xvfb pour vérifier qu'il démarre sans planter).
+The pipeline runs `cargo fmt --check`, `cargo clippy -D warnings`,
+`cargo audit`, `cargo geiger`, the test suite under Wine, then the release
+cross-compilation and a smoke test (launching the binary under Wine + Xvfb
+to check it starts without crashing).
 
-## Résultats de la dernière exécution du pipeline
+## Results from the last pipeline run
 
 - `cargo fmt --check`: OK
-- `cargo clippy --all-targets -D warnings`: OK, aucun avertissement
-- `cargo audit`: OK, 0 vulnérabilité connue sur 54 dépendances
-- `cargo geiger`: rapport généré — le code de `la_meuh` est entièrement
-  `unsafe` en surface (inévitable pour des appels Win32 bruts), concentré
-  dans `process.rs`/`app.rs`/`winget.rs` et documenté (commentaires
-  `SAFETY:`); les enveloppes RAII (`HandleGuard`) et `Send` explicites
-  couvrent les seuls points où une durée de vie/thread-safety implicite
-  aurait pu introduire un bug
-- Tests unitaires (`cargo xwin test`, exécutés sous Wine): 1/1 passés
-- `cargo xwin build --release`: OK — binaire MSVC, `PE32+ (GUI), x86-64,
-  7 sections`, ~1.8 Mo (contre 2.2 Mo / 19 sections pour l'original mingw)
-- Fumée sous Wine + Xvfb (headless): le processus tourne toujours après 4s
-  (fenêtre créée, boucle de messages active, pas de crash immédiat). Wine
-  n'ayant pas de vrai `winget`, le scénario "mise à jour réussie" n'a pas pu
-  être testé de bout en bout ici — seul un vrai Windows 11 le permettra.
+- `cargo clippy --all-targets -D warnings`: OK, no warnings
+- `cargo audit`: OK, 0 known vulnerabilities across 54 dependencies
+- `cargo geiger`: report generated — `la_meuh`'s code is entirely `unsafe`
+  on the surface (unavoidable for raw Win32 calls), concentrated in
+  `process.rs`/`app.rs`/`winget.rs` and documented (`SAFETY:` comments);
+  the RAII wrappers (`HandleGuard`) and explicit `Send` cover the only
+  points where an implicit lifetime/thread-safety issue could have
+  introduced a bug
+- Unit tests (`cargo xwin test`, run under Wine): 1/1 passed
+- `cargo xwin build --release`: OK — MSVC binary, `PE32+ (GUI), x86-64,
+  7 sections`, ~1.8 MB (vs. 2.2 MB / 19 sections for the original mingw
+  build)
+- Smoke test under Wine + Xvfb (headless): the process is still running
+  after 4s (window created, message loop active, no immediate crash).
+  Since Wine doesn't have a real `winget`, the "successful update"
+  scenario couldn't be fully tested end-to-end here — only a real Windows
+  11 machine can do that.
 
-## Licence
+## License
 
-MIT — © 2026 Spellskite-coding et Marwane Toury.
+MIT — © 2026 Spellskite-coding and Marwane Toury.
